@@ -11,15 +11,17 @@ struct State {
 };
 
 
-double beta = 0.5;   // taxa de transmissão
-double gamma = 0.3;  // taxa de recuperação
+double beta = 3.5;   // taxa de transmissão
+double gamma = 0.6;  // taxa de recuperação
+double mi = 0.1;     // morte natural
+double d = 0.3;       // morte por doença
 int N;            // população total
 
 State derivate(const State& y) {
     State dydt;
-    dydt.S = -beta * y.S * y.I / (double)N;
-    dydt.I = (beta * y.S * y.I / (double)N) - (gamma * y.I);
-    dydt.R = gamma * y.I;
+    dydt.S = (mi * N) + (d * y.I) - (mi * y.S) - (beta * y.S * y.I / (double)N);
+    dydt.I = (beta * y.S * y.I / (double)N) - (gamma * y.I) - (mi * y.I) - (d * y.I);
+    dydt.R = (gamma * y.I) - (mi * y.R);
     return dydt;
 }
 
@@ -46,7 +48,7 @@ State rk4(const State& y, int h) {
 int main() {
     // Condições iniciais
     State y0;
-    N = 90000;
+    N = 40000;
     y0.I = 200;    // infectados
     y0.S = N - y0.I;   // suscetíveis
     y0.R = 0;     // recuperados
@@ -57,7 +59,7 @@ int main() {
 
 
     // parâmetros da simulação
-    int T = 90;   // tempo total
+    int T = 100;   // tempo total
     int h = 1;     // passo de integração
     int steps = (T/h);
 
@@ -68,7 +70,12 @@ int main() {
 
     for (int i = 0; i <= steps; i++) {
         file << std::fixed 
-             << t << "," << int(y.S) << "," << int(y.I) << "," << int(y.R) << "\n";
+             << t << "," << float(y.S/N) << "," << float(y.I/N) << "," << float(y.R/N) << "\n";
+
+        if((y.S + y.I + y.R) > N-1 && N+1 < (y.S + y.I + y.R)){
+            std::cout << "erro no tempo: " << i << "\n";
+            std::cout << y.S+y.I+y.R << "," << int(y.S) << "," << int(y.I) << "," << int(y.R) << "\n";
+        }
 
         y = rk4(y, h);
         t += h;
